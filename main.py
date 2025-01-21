@@ -309,7 +309,7 @@ def sanitize_dataframe(df):
 def main():
     """Main script to fetch jobs and append them to Notion."""
     # Define search terms and location
-    search_terms = ["Software Engineer", "Backend Developer", "Backend Engineer", "SDE"]
+    search_terms = ["Software Engineer", "Backend", "SDE"]
     location = "India"
 
     # Fetch jobs
