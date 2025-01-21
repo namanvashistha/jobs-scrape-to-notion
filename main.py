@@ -2,6 +2,7 @@ import os
 import time
 import pandas as pd
 from datetime import datetime
+from babel.numbers import format_decimal
 from jobspy import scrape_jobs
 from notion_client import Client
 import logging
@@ -132,6 +133,23 @@ def prepare_properties(row):
             return {"url": value}
         return {"url": None}  # Use None instead of empty string for URLs
 
+    def format_currency(value):
+        try:
+            return format_decimal(value, locale='en_IN')
+        except ValueError:
+            return str(value)  # Fallback in case of formatting issues
+
+    def create_date(value):
+        if value and value != "No Value":
+            try:
+                # Ensure the date is a valid ISO 8601 string
+                parsed_date = datetime.strptime(value, "%Y-%m-%d")
+                return {"date": {"start": parsed_date.isoformat()}}
+            except ValueError:
+                logging.warning("Invalid date format: %s", value)
+        # Default to None if invalid or missing
+        return {"date": {"start": datetime.now().isoformat()}}
+
     # Map the row data to Notion properties
     properties = {
         "ID": create_rich_text(row.get("id")),
@@ -141,7 +159,7 @@ def prepare_properties(row):
         "Title": {"title": [{"text": {"content": str(row.get("title", "No Title"))}}]},
         "Company": create_rich_text(row.get("company")),
         "Location": create_rich_text(row.get("location")),
-        "Date Posted": {"date": {"start": str(row.get("date_posted", datetime.now()))}},
+        "Date Posted": create_date(row.get("date_posted")),
         "Job Type": create_rich_text(row.get("job_type")),
         "Salary Source": create_rich_text(row.get("salary_source")),
         "Is Remote": {"checkbox": bool(row.get("is_remote", False))},
@@ -162,7 +180,7 @@ def prepare_properties(row):
 
     # Handle salary range separately
     if all(key in row for key in ["currency", "min_amount", "max_amount", "interval"]):
-        salary_range = f"{row['currency']} {row['min_amount']} - {row['max_amount']} ({row['interval']})"
+        salary_range = f"{row['currency']} {format_currency(row['min_amount'])} - {format_currency(row['max_amount'])} ({row['interval']})"
         properties["Salary Range"] = create_rich_text(salary_range)
     else:
         properties["Salary Range"] = create_rich_text("No Salary Info")

@@ -1,3 +1,4 @@
 python-dotenv
 python-jobspy
 notion-client
+babel
