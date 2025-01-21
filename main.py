@@ -1,7 +1,7 @@
 import os
 import time
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from babel.numbers import format_decimal
 from jobspy import scrape_jobs
 from notion_client import Client
@@ -67,6 +67,7 @@ def create_notion_database():
         "Company Description": {
             "rich_text": {}
         },  # String type (rich text) for Company Description
+        "Created Time": {"date": {}},
     }
 
     new_database = notion.databases.create(
@@ -92,11 +93,7 @@ def fetch_jobs(search_terms, location, results_wanted=20, hours_old=72):
             logging.info("Scraping jobs for '%s' in '%s'...", term, location)
             jobs = scrape_jobs(
                 site_name=[
-                    "indeed",
-                    "linkedin",
-                    "zip_recruiter",
                     "glassdoor",
-                    "google",
                 ],
                 search_term=term,
                 location=location,
@@ -141,13 +138,22 @@ def prepare_properties(row):
 
     def create_date(value):
         if value and value != "No Value":
-            try:
-                # Ensure the date is a valid ISO 8601 string
-                parsed_date = datetime.strptime(value, "%Y-%m-%d")
-                return {"date": {"start": parsed_date.isoformat()}}
-            except ValueError:
-                logging.warning("Invalid date format: %s", value)
-        # Default to None if invalid or missing
+            # Check if the value is already a datetime.date object or datetime.datetime
+            if isinstance(value, datetime):
+                # If it's a datetime object, use isoformat directly
+                return {"date": {"start": value.isoformat()}}
+            elif isinstance(value, date):
+                # If it's a date object, convert to string using isoformat
+                return {"date": {"start": value.isoformat()}}
+            elif isinstance(value, str):
+                try:
+                    # If it's a string, try to parse it in the format 'YYYY-MM-DD'
+                    parsed_date = datetime.strptime(value, "%Y-%m-%d")
+                    return {"date": {"start": parsed_date.isoformat()}}
+                except ValueError:
+                    logging.warning("Invalid date format: %s", value)
+        
+        # If none of the above conditions are met, return current date
         return {"date": {"start": datetime.now().isoformat()}}
 
     # Map the row data to Notion properties
@@ -176,6 +182,7 @@ def prepare_properties(row):
         "Company Size": create_rich_text(row.get("company_num_employees")),
         "Company Revenue": create_rich_text(row.get("company_revenue")),
         "Company Description": create_rich_text(row.get("company_description")),
+        "Created Time": {"date": {"start": datetime.now().isoformat()}},
     }
 
     # Handle salary range separately
@@ -219,7 +226,7 @@ def append_to_notion(df, notion_client, database_id):
     skipped_count = 0
 
     for _, row in df.iterrows():
-        time.sleep(5)  # Sleep for 1 second to avoid rate limiting
+        # time.sleep(5)  # Sleep for 1 second to avoid rate limiting
         try:
             # Convert row to dictionary for easier handling
             job_data = row.to_dict()
@@ -272,7 +279,7 @@ def sanitize_dataframe(df):
 def main():
     """Main script to fetch jobs and append them to Notion."""
     # Define search terms and location
-    search_terms = ["Software Engineer", "Backend Developer", "Backend Engineer", "SDE"]
+    search_terms = ["Software Engineer"]
     location = "India"
 
     # Fetch jobs
