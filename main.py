@@ -55,7 +55,7 @@ def create_notion_database():
             "rich_text": {}
         },  # String type (rich text) for Company Industry
         "Company Url": {"url": {}},  # Url type for Company Url
-        "Company Logo": {"url": {}},  # Url type for Company Logo
+        "Company Logo": {"files": {}},  # files type for Company Logo
         "Direct Company Url": {"url": {}},  # Url type for Direct Company Url
         "Company Addresses": {
             "rich_text": {}
@@ -160,6 +160,32 @@ def prepare_properties(row):
         # If none of the above conditions are met, return current date
         return {"date": {"start": datetime.now().isoformat()}}
 
+    def create_file(value):
+        if value and value != "No Value" and value != "":
+            print(f"Processing logo URL: {value}")
+            return {
+                "files": [
+                    {
+                        "name": "company_logo",  # You should specify a name for the file
+                        "type": "external",      # Specify external file type
+                        "external": {"url": value}  # Provide the URL of the logo
+                    }
+                ]
+            }
+        # Placeholder for missing logo
+        return {
+            "files": [
+                {
+                    "name": "_",  # Specify a name for the placeholder
+                    "type": "external",          # External type
+                    "external": {"url": "https://placehold.co/1"}
+                }
+            ]
+        }
+
+
+    print(row["title"])
+
     # Map the row data to Notion properties
     properties = {
         "ID": create_rich_text(row.get("id")),
@@ -180,7 +206,7 @@ def prepare_properties(row):
         "Description": create_rich_text(row.get("description")),
         "Company Industry": create_rich_text(row.get("company_industry")),
         "Company Url": create_url(row.get("company_url")),
-        "Company Logo": create_url(row.get("company_logo")),
+        "Company Logo": create_file(row.get("company_logo")),
         "Direct Company Url": create_url(row.get("company_url_direct")),
         "Company Addresses": create_rich_text(row.get("company_addresses")),
         "Company Size": create_rich_text(row.get("company_num_employees")),
