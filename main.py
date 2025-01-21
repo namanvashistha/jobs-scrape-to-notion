@@ -93,7 +93,11 @@ def fetch_jobs(search_terms, location, results_wanted=20, hours_old=72):
             logging.info("Scraping jobs for '%s' in '%s'...", term, location)
             jobs = scrape_jobs(
                 site_name=[
+                    "indeed",
+                    "linkedin",
+                    "zip_recruiter",
                     "glassdoor",
+                    "google",
                 ],
                 search_term=term,
                 location=location,
@@ -226,7 +230,7 @@ def append_to_notion(df, notion_client, database_id):
     skipped_count = 0
 
     for _, row in df.iterrows():
-        # time.sleep(5)  # Sleep for 1 second to avoid rate limiting
+        time.sleep(5)  # Sleep for 1 second to avoid rate limiting
         try:
             # Convert row to dictionary for easier handling
             job_data = row.to_dict()
@@ -279,7 +283,7 @@ def sanitize_dataframe(df):
 def main():
     """Main script to fetch jobs and append them to Notion."""
     # Define search terms and location
-    search_terms = ["Software Engineer"]
+    search_terms = ["Software Engineer", "Backend Developer", "Backend Engineer", "SDE"]
     location = "India"
 
     # Fetch jobs
