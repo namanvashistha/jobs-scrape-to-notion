@@ -13,7 +13,11 @@ load_dotenv()
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("jobs_script.log"),
+        logging.StreamHandler()
+    ]
 )
 
 # Notion configuration (replace with your credentials)
@@ -315,7 +319,6 @@ def main():
     if not jobs_df.empty:
         # Save jobs to CSV for backup
         jobs_df = sanitize_dataframe(jobs_df)
-        breakpoint()
         jobs_df.to_csv("jobs.csv", index=False)
         # logging.info("Jobs saved to jobs.csv")
 
