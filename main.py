@@ -85,7 +85,7 @@ def create_notion_database():
 # fetch_notion_databases()
 
 
-def fetch_jobs(search_terms, location, results_wanted=20, hours_old=72):
+def fetch_jobs(search_terms, location, results_wanted=20, hours_old=4):
     """Fetch jobs for multiple search terms and locations."""
     all_jobs = []
     for term in search_terms:
@@ -93,11 +93,7 @@ def fetch_jobs(search_terms, location, results_wanted=20, hours_old=72):
             logging.info("Scraping jobs for '%s' in '%s'...", term, location)
             jobs = scrape_jobs(
                 site_name=[
-                    "indeed",
                     "linkedin",
-                    "zip_recruiter",
-                    "glassdoor",
-                    "google",
                 ],
                 search_term=term,
                 location=location,
@@ -319,6 +315,7 @@ def main():
     if not jobs_df.empty:
         # Save jobs to CSV for backup
         jobs_df = sanitize_dataframe(jobs_df)
+        breakpoint()
         jobs_df.to_csv("jobs.csv", index=False)
         # logging.info("Jobs saved to jobs.csv")
 
