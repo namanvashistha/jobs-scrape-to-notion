@@ -1,11 +1,15 @@
 import os
 import time
+import json
 import pandas as pd
 from datetime import datetime, date
+import gspread
+from google.oauth2.service_account import Credentials
 from babel.numbers import format_decimal
 from jobspy import scrape_jobs
 from notion_client import Client
 import logging
+
 
 from dotenv import load_dotenv
 
@@ -23,6 +27,9 @@ logging.basicConfig(
 # Notion configuration (replace with your credentials)
 NOTION_API_KEY = os.getenv("NOTION_API_KEY")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
+GSHEETS_SERVICE_ACCOUNT = json.loads(os.getenv("GSHEETS_SERVICE_ACCOUNT"))
+GSHEETS_SHEETS_NAME = os.getenv("GSHEETS_SHEETS_NAME")
+GSHEETS_WORKSHEET_NAME = os.getenv("GSHEETS_WORKSHEET_NAME")
 
 # Initialize Notion client
 notion = Client(auth=NOTION_API_KEY)
@@ -89,7 +96,7 @@ def create_notion_database():
 # fetch_notion_databases()
 
 
-def fetch_jobs(search_terms, location, results_wanted=20, hours_old=4):
+def fetch_jobs(search_terms, location, results_wanted=5, hours_old=4):
     """Fetch jobs for multiple search terms and locations."""
     all_jobs = []
     for term in search_terms:
@@ -136,7 +143,7 @@ def prepare_properties(row):
 
     def format_currency(value):
         try:
-            return format_decimal(value, locale='en_IN')
+            return format_decimal(value, locale="en_IN")
         except ValueError:
             return str(value)  # Fallback in case of formatting issues
 
@@ -156,7 +163,7 @@ def prepare_properties(row):
                     return {"date": {"start": parsed_date.isoformat()}}
                 except ValueError:
                     logging.warning("Invalid date format: %s", value)
-        
+
         # If none of the above conditions are met, return current date
         return {"date": {"start": datetime.now().isoformat()}}
 
@@ -167,8 +174,8 @@ def prepare_properties(row):
                 "files": [
                     {
                         "name": "company_logo",  # You should specify a name for the file
-                        "type": "external",      # Specify external file type
-                        "external": {"url": value}  # Provide the URL of the logo
+                        "type": "external",  # Specify external file type
+                        "external": {"url": value},  # Provide the URL of the logo
                     }
                 ]
             }
@@ -177,12 +184,11 @@ def prepare_properties(row):
             "files": [
                 {
                     "name": "_",  # Specify a name for the placeholder
-                    "type": "external",          # External type
-                    "external": {"url": "https://placehold.co/1"}
+                    "type": "external",  # External type
+                    "external": {"url": "https://placehold.co/1"},
                 }
             ]
         }
-
 
     print(row["title"])
 
@@ -264,17 +270,21 @@ def append_to_notion(df, notion_client, database_id):
             # Check if job already exists
             if check_job_exists(job_data):
                 logging.info(
-                    "Skipping duplicate job: %s at %s", job_data['title'], job_data['company']
+                    "Skipping duplicate job: %s at %s",
+                    job_data["title"],
+                    job_data["company"],
                 )
                 skipped_count += 1
                 continue
 
-            logging.info("Adding job: %s at %s...", job_data['title'], job_data['company'])
+            logging.info(
+                "Adding job: %s at %s...", job_data["title"], job_data["company"]
+            )
             properties = prepare_properties(row)
             notion_client.pages.create(
                 parent={"database_id": database_id}, properties=properties
             )
-            logging.info("Successfully added: %s", job_data['title'])
+            logging.info("Successfully added: %s", job_data["title"])
             added_count += 1
 
         except Exception as e:
@@ -282,8 +292,52 @@ def append_to_notion(df, notion_client, database_id):
 
     logging.info(
         "Operation completed. Added %d jobs, skipped %d duplicates.",
-        added_count, skipped_count
+        added_count,
+        skipped_count,
     )
+
+
+def append_to_gsheet(df, sheet_name, worksheet_name):
+    """Append only new job listings to Google Sheets"""
+    # Authorize with credentials
+    creds = Credentials.from_service_account_info(
+        GSHEETS_SERVICE_ACCOUNT,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive",
+        ],
+    )
+    gc = gspread.authorize(creds)
+    sh = gc.open(sheet_name)
+    worksheet = sh.worksheet(worksheet_name)
+
+    headers = df.columns.tolist()
+
+    # Fetch all values from the sheet
+    sheet_data = worksheet.get_all_values()
+    if all(len(row) == 0 or all(cell == "" for cell in row) for row in sheet_data):
+        # Sheet is empty → write headers first
+        worksheet.append_row(headers, value_input_option="RAW")
+        existing_ids = set()
+        logging.info("Sheet was empty. Headers added.")
+    else:
+        # Sheet has content → extract existing records
+        existing_records = worksheet.get_all_records()
+        existing_ids = {row.get("id") for row in existing_records if row.get("id")}
+        logging.info("Existing IDs: %s", existing_ids)
+
+    # Filter DataFrame for new jobs (based on 'id' column in DataFrame vs 'ID' in sheet)
+    new_jobs_df = df[~df["id"].isin(existing_ids)]
+
+    if new_jobs_df.empty:
+        logging.info("No new jobs to append to Google Sheets.")
+        return
+
+    # Append new rows
+    rows_to_add = new_jobs_df.values.tolist()
+    worksheet.append_rows(rows_to_add, value_input_option="RAW")
+
+    logging.info("Appended %d new job(s) to Google Sheets.", len(rows_to_add))
 
 
 def sanitize_dataframe(df):
@@ -324,6 +378,7 @@ def main():
 
         # Append jobs to Notion
         append_to_notion(jobs_df, notion, NOTION_DATABASE_ID)
+        append_to_gsheet(jobs_df, GSHEETS_SHEETS_NAME, GSHEETS_WORKSHEET_NAME)
     else:
         logging.warning("No jobs found to append to Notion.")
 
