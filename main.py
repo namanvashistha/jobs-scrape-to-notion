@@ -17,11 +17,9 @@ load_dotenv()
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("jobs_script.log"),
-        logging.StreamHandler()
-    ]
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler("jobs_script.log"), logging.StreamHandler()],
 )
 
 # Notion configuration (replace with your credentials)

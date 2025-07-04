@@ -1,0 +1,29 @@
+A2 in sheet companies
+'''
+=SORT(
+  UNIQUE(FILTER(jobs!F2:F, jobs!F2:F <> "")),
+  BYROW(
+    UNIQUE(FILTER(jobs!F2:F, jobs!F2:F <> "")),
+    LAMBDA(company,
+      MAX(FILTER(ROW(jobs!F2:F), jobs!F2:F = company))
+    )
+  ),
+  FALSE
+)
+'''
+
+B2 in sheet companies
+'''
+=ARRAYFORMULA(
+    IF(A2:A="",,
+        MAP(A2:A, LAMBDA(company, 
+            IFERROR(
+                HYPERLINK(
+                    SPLIT(TEXTJOIN("♦", TRUE, SORT(FILTER(jobs!C$2:C, jobs!F$2:F = company), FILTER(ROW(jobs!C$2:C), jobs!F$2:F = company), FALSE)), "♦"),
+                    SPLIT(TEXTJOIN("♦", TRUE, SORT(FILTER(jobs!E$2:E, jobs!F$2:F = company), FILTER(ROW(jobs!E$2:E), jobs!F$2:F = company), FALSE)), "♦")
+                )
+            )
+        ))
+    )
+)
+'''
