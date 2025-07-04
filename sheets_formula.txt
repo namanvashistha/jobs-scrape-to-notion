@@ -15,15 +15,24 @@ A2 in sheet companies
 B2 in sheet companies
 '''
 =ARRAYFORMULA(
-    IF(A2:A="",,
-        MAP(A2:A, LAMBDA(company, 
-            IFERROR(
-                HYPERLINK(
-                    SPLIT(TEXTJOIN("♦", TRUE, SORT(FILTER(jobs!C$2:C, jobs!F$2:F = company), FILTER(ROW(jobs!C$2:C), jobs!F$2:F = company), FALSE)), "♦"),
-                    SPLIT(TEXTJOIN("♦", TRUE, SORT(FILTER(jobs!E$2:E, jobs!F$2:F = company), FILTER(ROW(jobs!E$2:E), jobs!F$2:F = company), FALSE)), "♦")
-                )
-            )
-        ))
-    )
+  IF(A2:A="",,
+    MAP(A2:A, LAMBDA(company,
+      IFERROR(
+        HYPERLINK(
+          SPLIT(TEXTJOIN("♦", TRUE, SORT(
+            FILTER(jobs!C$2:C, jobs!F$2:F = company),
+            FILTER(ROW(jobs!C$2:C), jobs!F$2:F = company),
+            FALSE)), "♦"),
+          SPLIT(TEXTJOIN("♦", TRUE, SORT(
+            FILTER(
+              IFERROR(INDEX(SPLIT(jobs!G$2:G, ","), 0, 1), "Unknown") & " - " & jobs!E$2:E,
+              jobs!F$2:F = company
+            ),
+            FILTER(ROW(jobs!E$2:E), jobs!F$2:F = company),
+            FALSE)), "♦")
+        )
+      )
+    ))
+  )
 )
 '''

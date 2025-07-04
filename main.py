@@ -326,12 +326,14 @@ def append_to_gsheet(df, sheet_name, worksheet_name):
 
     # Filter DataFrame for new jobs (based on 'id' column in DataFrame vs 'ID' in sheet)
     new_jobs_df = df[~df["id"].isin(existing_ids)]
+    new_jobs_df = new_jobs_df.drop_duplicates(subset=["id"])
 
     if new_jobs_df.empty:
         logging.info("No new jobs to append to Google Sheets.")
         return
 
     # Append new rows
+    new_jobs_df = new_jobs_df.reset_index(drop=True)
     rows_to_add = new_jobs_df.values.tolist()
     worksheet.append_rows(rows_to_add, value_input_option="RAW")
 
