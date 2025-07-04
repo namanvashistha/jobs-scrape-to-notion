@@ -9,6 +9,7 @@ dependencies = [
     "google-auth>=2.40.3",
     "gspread>=6.2.1",
     "notion-client>=2.4.0",
+    "pandas>=2.3.0",
     "python-dotenv>=1.1.1",
     "python-jobspy>=1.1.80",
 ]
