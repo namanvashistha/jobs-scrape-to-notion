@@ -376,9 +376,8 @@ def main():
         jobs_df.to_csv("jobs.csv", index=False)
         # logging.info("Jobs saved to jobs.csv")
 
-        # Append jobs to Notion
-        append_to_notion(jobs_df, notion, NOTION_DATABASE_ID)
         append_to_gsheet(jobs_df, GSHEETS_SHEETS_NAME, GSHEETS_WORKSHEET_NAME)
+        append_to_notion(jobs_df, notion, NOTION_DATABASE_ID)
     else:
         logging.warning("No jobs found to append to Notion.")
 
